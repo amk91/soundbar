@@ -79,11 +79,11 @@ impl App {
         path: &PathBuf
     ) -> Result<()> {
         if let Ok(soundbite) = Soundbite::new(&self.stream_handle, &path) {
-            info!("Soundbite {} generated, filepath {:?}", name, path);
+            trace!("Soundbite {} generated, filepath {:?}", name, path);
             self.soundbites.insert(name, soundbite);
             return Ok(());
         } else {
-            error!("{} - {:?}", name, path);
+            trace!("{} - {:?}", name, path);
             bail!(
                 "Unable to generate soundbite from {}",
                 path.to_str().unwrap_or("")
@@ -101,10 +101,10 @@ impl App {
             self.soundtasks.insert(key_task.get_code(), soundbite_name);
             return Ok(());
         } else if key_task.get_code() == 0 {
-            error!("Invalid key combination, {} - {:?}", soundbite_name, key_task);
+            trace!("Invalid key combination, {} - {:?}", soundbite_name, key_task);
             bail!("Key combination is invalid or empty");
         } else {
-            error!("Unable to find soundbite {}", soundbite_name);
+            trace!("Unable to find soundbite {}", soundbite_name);
             bail!("Unable to find soundbite {}", soundbite_name);
         }
     }
@@ -114,7 +114,7 @@ impl App {
             soundbite.play();
             Ok(())
         } else {
-            error!("Unable to find soundbite {}", soundbite_name);
+            trace!("Unable to find soundbite {}", soundbite_name);
             bail!("Unable to find soundbite {}", soundbite_name);
         }
     }

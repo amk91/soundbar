@@ -88,15 +88,7 @@ fn generate_app_folders() -> (PathBuf, PathBuf) {
 
 fn init_logging(logs_folder: &PathBuf) {
     simple_logging::log_to_file(
-        logs_folder.join("debug.txt"),
-        LevelFilter::Debug
-    ).expect("Unable to init logging on debug.txt");
-    simple_logging::log_to_file(
-        logs_folder.join("error.txt"),
-        LevelFilter::Error
-    ).expect("Unable to init logging on error.txt");
-    simple_logging::log_to_file(
-        logs_folder.join("info.txt"),
-        LevelFilter::Info
+        logs_folder.join("trace.txt"),
+        LevelFilter::Trace
     ).expect("Unable to init logging on info.txt");
 }
