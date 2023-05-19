@@ -289,6 +289,13 @@ impl KeyTask {
         })
     }
 
+    pub fn try_from(key_code: u32) -> Result<KeyTask> {
+        let sys_key = key_code >> 2;
+        let key = key_code & 0x0F;
+
+        KeyTask::try_new(key, sys_key)
+    }
+
     pub fn get_code(&self) -> u16 {
         if let Some(key) = &self.key {
             let mut code = if let Some(sys_key) = &self.sys_key {

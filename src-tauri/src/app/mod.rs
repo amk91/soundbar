@@ -5,7 +5,7 @@ use std::{
 
 use crossbeam::channel::Receiver;
 use rodio::{OutputStreamHandle, OutputStream};
-use anyhow::{Result, bail};
+use anyhow::{Result, bail, anyhow};
 use log::trace;
 
 #[macro_use]
@@ -69,6 +69,24 @@ impl App {
                 }
             }
 
+            if let Ok(command) = self.receiver.try_recv() {
+                let res = match command {
+                    Command::Add(name, path) => self.add_soundbite(name, &PathBuf::from(path)),
+                    Command::Link(name, key_code) => {
+                        match KeyTask::try_from(key_code) {
+                            Ok(key_task) => self.link_soundbite_to_keytask(name, key_task),
+                            Err(err) => Err(err),
+                        }
+                    },
+                    Command::Volume(name, volume) => self.set_volume(name, volume),
+                    Command::Speed(name, speed) => self.set_speed(name, speed),
+                    _ => Err(anyhow!("Unrecognized command, {:?}", command)),
+                };
+
+                //TODO: display error on UI
+                res.unwrap_or(());
+            }
+
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
     }
@@ -106,6 +124,34 @@ impl App {
         } else {
             trace!("Unable to find soundbite {}", soundbite_name);
             bail!("Unable to find soundbite {}", soundbite_name);
+        }
+    }
+
+    pub fn set_volume(
+        &mut self,
+        soundbite_name: String,
+        volume: f32
+    ) -> Result<()> {
+        match self.soundbites.get_mut(&soundbite_name) {
+            Some(soundbite) => {
+                soundbite.set_volume(volume);
+                Ok(())
+            },
+            None => bail!("Unable to find soundbite {}", soundbite_name)
+        }
+    }
+
+    pub fn set_speed(
+        &mut self,
+        soundbite_name: String,
+        speed: f32
+    ) -> Result<()> {
+        match self.soundbites.get_mut(&soundbite_name) {
+            Some(soundbite) => {
+                soundbite.set_speed(speed);
+                Ok(())
+            },
+            None => bail!("Unable to find soundbite {}", soundbite_name)
         }
     }
 
