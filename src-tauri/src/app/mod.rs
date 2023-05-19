@@ -1,13 +1,10 @@
 use std::{
     path::PathBuf,
-    fs,
-    io::ErrorKind::NotFound,
     collections::HashMap,
 };
 
 use crossbeam::channel::Receiver;
 use rodio::{OutputStreamHandle, OutputStream};
-use directories::ProjectDirs;
 use anyhow::{Result, bail};
 use log::{error, debug, info};
 
@@ -26,7 +23,7 @@ use key_hook::{KEY_TASK, init_key_hook};
 
 //TODO: error handling
 pub struct App {
-    pub soundbites_dir: PathBuf,
+    root_folder: PathBuf,
 
     stream_handle: OutputStreamHandle,
     _stream: OutputStream,
@@ -38,28 +35,8 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(receiver: Receiver<Command>) -> App {
+    pub fn new(root_folder: PathBuf, receiver: Receiver<Command>) -> App {
         init_key_hook();
-
-        let soundbites_dir = if let Some(project_dirs) = ProjectDirs::from(
-            "", "", "soundbar"
-        ) {
-            project_dirs.config_dir();
-            PathBuf::from(project_dirs.data_dir())
-        } else {
-            panic!("Unable to generate project directories");
-        };
-
-        if let Err(err) = fs::metadata(soundbites_dir.as_path()) {
-            if err.kind() == NotFound {
-                if let Err(_) = fs::create_dir_all(soundbites_dir.as_path()) {
-                    panic!(
-                        "Unable to create directory {}",
-                        soundbites_dir.display()
-                    );
-                }
-            }
-        }
 
         //TODO: give option to select a different output device
         let (_stream, stream_handle) = if let Ok(output) = OutputStream::try_default() {
@@ -69,7 +46,8 @@ impl App {
         };
 
         App {
-            soundbites_dir,
+            root_folder,
+
             stream_handle,
             _stream,
             soundbites: HashMap::new(),
@@ -89,10 +67,6 @@ impl App {
 
                     v.key = None;
                 }
-            }
-
-            if let Ok(msg) = self.receiver.try_recv() {
-                println!("IN APP LOOP: {:?}", msg);
             }
 
             std::thread::sleep(std::time::Duration::from_millis(100));
