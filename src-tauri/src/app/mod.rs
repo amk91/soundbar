@@ -1,7 +1,3 @@
-pub mod key_task;
-pub mod soundbite;
-mod key_hook;
-
 use std::{
     path::PathBuf,
     fs,
@@ -9,13 +5,23 @@ use std::{
     collections::HashMap,
 };
 
+use crossbeam::channel::Receiver;
 use rodio::{OutputStreamHandle, OutputStream};
 use directories::ProjectDirs;
 use anyhow::{Result, bail};
 use log::{error, debug, info};
 
+#[macro_use]
+pub mod commands;
+use commands::utils::Command;
+
+pub mod soundbite;
 use soundbite::Soundbite;
+
+pub mod key_task;
 use key_task::KeyTask;
+
+mod key_hook;
 use key_hook::{KEY_TASK, init_key_hook};
 
 //TODO: error handling
@@ -27,10 +33,12 @@ pub struct App {
     
     soundbites: HashMap<String, Soundbite>,
     soundtasks: HashMap<u16, String>,
+
+    receiver: Receiver<Command>,
 }
 
 impl App {
-    pub fn new() -> App {
+    pub fn new(receiver: Receiver<Command>) -> App {
         init_key_hook();
 
         let soundbites_dir = if let Some(project_dirs) = ProjectDirs::from(
@@ -66,6 +74,8 @@ impl App {
             _stream,
             soundbites: HashMap::new(),
             soundtasks: HashMap::new(),
+
+            receiver
         }
     }
 
@@ -79,6 +89,10 @@ impl App {
 
                     v.key = None;
                 }
+            }
+
+            if let Ok(msg) = self.receiver.try_recv() {
+                println!("IN APP LOOP: {:?}", msg);
             }
 
             std::thread::sleep(std::time::Duration::from_millis(100));
