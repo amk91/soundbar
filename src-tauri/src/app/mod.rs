@@ -6,7 +6,7 @@ use std::{
 use crossbeam::channel::Receiver;
 use rodio::{OutputStreamHandle, OutputStream};
 use anyhow::{Result, bail};
-use log::{error, debug, info};
+use log::trace;
 
 #[macro_use]
 pub mod commands;
