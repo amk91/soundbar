@@ -5,12 +5,12 @@ use std::{
 
 use crossbeam::channel::Receiver;
 use rodio::{OutputStreamHandle, OutputStream};
-use anyhow::{Result, bail, anyhow};
+use anyhow::{Result, bail};
 use log::trace;
 
 #[macro_use]
 pub mod commands;
-use commands::utils::Command;
+use commands::utils::{Command, CommandPayload, CommandError, CommandResult};
 
 pub mod soundbite;
 use soundbite::Soundbite;
@@ -35,7 +35,10 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(root_folder: PathBuf, receiver: Receiver<Command>) -> App {
+    pub fn new(
+        root_folder: PathBuf,
+        receiver: Receiver<Command>,
+    ) -> App {
         init_key_hook();
 
         //TODO: give option to select a different output device
@@ -75,87 +78,99 @@ impl App {
                     Command::Link(name, key_code) => {
                         match KeyTask::try_from(key_code) {
                             Ok(key_task) => self.link_soundbite_to_keytask(name, key_task),
-                            Err(err) => Err(err),
+                            Err(_) => Err(CommandError::KeyCombinationInvalid),
                         }
                     },
                     Command::Volume(name, volume) => self.set_volume(name, volume),
                     Command::Speed(name, speed) => self.set_speed(name, speed),
-                    _ => Err(anyhow!("Unrecognized command, {:?}", command)),
+
+                    _ => Err(CommandError::UnrecognizedCommand),
                 };
 
                 //TODO: display error on UI
-                res.unwrap_or(());
+                res.unwrap();
             }
 
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
     }
 
-    pub fn add_soundbite(
+    fn add_soundbite(
         &mut self,
         name: String,
         path: &PathBuf
-    ) -> Result<()> {
+    ) -> CommandResult {
+        if let Some(_) = self.soundbites.get(&name) {
+            trace!("ERR: soundbite name {} [[path: {}]] already in use", name, path.display());
+            return Err(CommandError::SoundbiteNameUsed(name));
+        }
+
         if let Ok(soundbite) = Soundbite::new(&self.stream_handle, &path) {
             trace!("Soundbite {} generated, filepath {:?}", name, path);
             self.soundbites.insert(name, soundbite);
-            return Ok(());
+            Ok(CommandPayload::default())
         } else {
-            trace!("{} - {:?}", name, path);
-            bail!(
-                "Unable to generate soundbite from {}",
-                path.to_str().unwrap_or("")
-            );
+            trace!("ERR: unable to generate soundbite from path {}", path.display());
+            Err(
+                CommandError::SoundbiteGenerationFailed(
+                    String::from(path.to_str().unwrap_or_default())
+                )
+            )
         }
     }
 
-    pub fn link_soundbite_to_keytask(
+    fn link_soundbite_to_keytask(
         &mut self,
         soundbite_name: String,
         key_task: KeyTask
-    ) -> Result<()> {
+    ) -> CommandResult {
         let soundbite = &self.soundbites.get(&soundbite_name);
         if key_task.get_code() != 0 && soundbite.is_some() {
+            if let Some(soundbite_name) = self.soundtasks.get(&key_task.get_code()) {
+                trace!("ERR: Key {:?} already assigned to soundbite {}", key_task, soundbite_name);
+                return Err(CommandError::KeyAlreadyAssigned(soundbite_name.clone(), "".into()));
+            }
+
             self.soundtasks.insert(key_task.get_code(), soundbite_name);
-            return Ok(());
+            return Ok(CommandPayload::default());
         } else if key_task.get_code() == 0 {
-            trace!("Invalid key combination, {} - {:?}", soundbite_name, key_task);
-            bail!("Key combination is invalid or empty");
+            trace!("ERR: Invalid key combination, {} - {:?}", soundbite_name, key_task);
+            Err(CommandError::KeyCombinationInvalid)
         } else {
             trace!("Unable to find soundbite {}", soundbite_name);
-            bail!("Unable to find soundbite {}", soundbite_name);
+            Err(CommandError::SoundbiteNotFound(soundbite_name))
         }
     }
 
-    pub fn set_volume(
+    fn set_volume(
         &mut self,
         soundbite_name: String,
         volume: f32
-    ) -> Result<()> {
+    ) -> CommandResult {
         match self.soundbites.get_mut(&soundbite_name) {
             Some(soundbite) => {
                 soundbite.set_volume(volume);
-                Ok(())
+                Ok(CommandPayload::default())
             },
-            None => bail!("Unable to find soundbite {}", soundbite_name)
+            None => Err(CommandError::SoundbiteNotFound(soundbite_name))
         }
     }
 
-    pub fn set_speed(
+    fn set_speed(
         &mut self,
         soundbite_name: String,
         speed: f32
-    ) -> Result<()> {
+    ) -> CommandResult {
         match self.soundbites.get_mut(&soundbite_name) {
             Some(soundbite) => {
                 soundbite.set_speed(speed);
-                Ok(())
+                Ok(CommandPayload::default())
             },
-            None => bail!("Unable to find soundbite {}", soundbite_name)
+            None => Err(CommandError::SoundbiteNotFound(soundbite_name))
         }
     }
 
-    pub fn play_soundbite(&self, soundbite_name: &String) -> Result<()> {
+    fn play_soundbite(&self, soundbite_name: &String) -> Result<()> {
         if let Some(soundbite) = &self.soundbites.get(soundbite_name) {
             soundbite.play();
             Ok(())
