@@ -32,8 +32,9 @@ fn main() {
 
             app.manage(CommandState::new(Mutex::new(tx)));
 
+            let handle = app.handle();
             std::thread::spawn(|| {
-                let mut app = app::App::new(root_folder, rx);
+                let mut app = app::App::new(root_folder, rx, handle);
                 app.run();
             });
 
@@ -87,8 +88,15 @@ fn generate_app_folders() -> (PathBuf, PathBuf) {
 }
 
 fn init_logging(logs_folder: &PathBuf) {
-    simple_logging::log_to_file(
-        logs_folder.join("trace.txt"),
-        LevelFilter::Trace
-    ).expect("Unable to init logging on info.txt");
+    if cfg!(debug_assertions) {
+        simple_logging::log_to_file(
+            "logs\\trace.txt",
+            LevelFilter::Trace,
+        ).expect("Unable to init logging on info.txt in debug");
+    } else {
+        simple_logging::log_to_file(
+            logs_folder.join("trace.txt"),
+            LevelFilter::Trace
+        ).expect("Unable to init logging on info.txt");
+    }
 }

@@ -1,5 +1,5 @@
 [package]
-name = "soundbar-tauri"
+name = "soundbar"
 version = "0.0.0"
 description = "A Tauri App"
 authors = ["amk319"]
@@ -31,7 +31,6 @@ directories = "5.0.0"
 
 log = "0.4.17"
 simple-logging = "2.0.2"
-
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

@@ -13,13 +13,13 @@ pub enum Command {
     LinkedSoundbitesList,
 }
 
-#[derive(Default)]
+#[derive(Debug, Clone, Default, serde::Serialize)]
 pub struct CommandPayload {
     pub soundbites_list: Vec<String>,
     pub linked_soundbites_list: Vec<(String, String)>,
 }
 
-#[derive(Error, Debug, serde::Serialize)]
+#[derive(Error, Debug, Clone, serde::Serialize)]
 pub enum CommandError {
     #[error("Unrecognized command")]
     UnrecognizedCommand,

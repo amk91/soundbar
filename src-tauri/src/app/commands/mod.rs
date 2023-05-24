@@ -1,6 +1,6 @@
-
 use tauri::State;
 use anyhow::Result;
+use log::trace;
 
 pub mod utils;
 use utils::*;
@@ -11,6 +11,7 @@ fn send_command(
     state: &State<'_, CommandState>,
     command: Command
 ) -> Result<(), CommandError> {
+    trace!("Command fired {:?}", command);
     match state.sender.lock() {
         Ok(sender) => {
             match sender.send(command.clone()) {

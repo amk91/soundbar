@@ -3,6 +3,7 @@ use std::{
     collections::HashMap,
 };
 
+use tauri::Manager;
 use crossbeam::channel::Receiver;
 use rodio::{OutputStreamHandle, OutputStream};
 use anyhow::{Result, bail};
@@ -20,6 +21,7 @@ use key_task::KeyTask;
 
 mod key_hook;
 use key_hook::{KEY_TASK, init_key_hook};
+use tauri::AppHandle;
 
 //TODO: error handling
 pub struct App {
@@ -31,6 +33,7 @@ pub struct App {
     soundbites: HashMap<String, Soundbite>,
     soundtasks: HashMap<u16, String>,
 
+    app_handle: AppHandle,
     receiver: Receiver<Command>,
 }
 
@@ -38,14 +41,17 @@ impl App {
     pub fn new(
         root_folder: PathBuf,
         receiver: Receiver<Command>,
+        app_handle: AppHandle,
     ) -> App {
         init_key_hook();
 
         //TODO: give option to select a different output device
-        let (_stream, stream_handle) = if let Ok(output) = OutputStream::try_default() {
-            output
-        } else {
-            panic!("Unable to get default output stream");
+        let (_stream, stream_handle) = match OutputStream::try_default() {
+            Ok(output) => output,
+            Err(err) => {
+                trace!("ERR: unable to get default output stream, {}", err.to_string());
+                panic!("Unable to get default output stream");
+            }
         };
 
         App {
@@ -56,24 +62,31 @@ impl App {
             soundbites: HashMap::new(),
             soundtasks: HashMap::new(),
 
+            app_handle,
             receiver
         }
     }
 
     pub fn run(&mut self) {
         loop {
-            if let Ok(v) = KEY_TASK.try_lock().as_deref_mut() {
-                if let Some(_) = &v.key {
-                    if let Some(soundbite_name) = self.soundtasks.get(&v.get_code()) {
-                        self.play_soundbite(soundbite_name).unwrap_or(());
+            if let Ok(key_task) = KEY_TASK.try_lock().as_deref_mut() {
+                if let Some(_) = &key_task.key {
+                    if let Some(soundbite_name) = self.soundtasks.get(&key_task.get_code()) {
+                        match self.play_soundbite(soundbite_name) {
+                            Ok(_) => trace!("Soundbite {} played", soundbite_name),
+                            Err(err) => trace!(
+                                "ERR: Soundbite couldn't be played [[{}]]",
+                                err.to_string()
+                            ),
+                        }
                     }
 
-                    v.key = None;
+                    key_task.key = None;
                 }
             }
 
             if let Ok(command) = self.receiver.try_recv() {
-                let res = match command {
+                let _res = match command {
                     Command::Add(name, path) => self.add_soundbite(name, &PathBuf::from(path)),
                     Command::Link(name, key_code) => {
                         match KeyTask::try_from(key_code) {
@@ -87,8 +100,10 @@ impl App {
                     _ => Err(CommandError::UnrecognizedCommand),
                 };
 
-                //TODO: display error on UI
-                res.unwrap();
+                match self.app_handle.emit_all("command_result", CommandPayload::default()) {
+                    Ok(_) => trace!("Event emitted"),
+                    Err(err) => trace!("ERR: Unable to emit event [[{}]]", err.to_string()),
+                }
             }
 
             std::thread::sleep(std::time::Duration::from_millis(100));

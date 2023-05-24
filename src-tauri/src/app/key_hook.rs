@@ -1,7 +1,6 @@
 use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
-
 use super::key_task::KeyTask;
 
 pub static KEY_TASK: Lazy<Mutex<KeyTask>> = Lazy::new(
@@ -125,6 +124,7 @@ pub mod windows {
 
     pub fn init_key_hook() {
         std::thread::spawn(|| {
+            log::trace!("Key hook spawned");
             unsafe {
                 let hook = &mut SetWindowsHookExW(
                     WH_KEYBOARD_LL,
@@ -132,9 +132,10 @@ pub mod windows {
                     0 as HINSTANCE,
                     0
                 );
-    
+
                 HOOK.get_or_init(|| AtomicPtr::new(hook));
     
+                log::trace!("Hook generated, {:?}, GetMessageW started", hook);
                 let mut msg: MSG = std::mem::MaybeUninit::zeroed().assume_init();
                 GetMessageW(&mut msg, 0 as HWND, 0, 0);
             };
