@@ -12,7 +12,7 @@ pub fn init_key_hook() {
     if cfg!(windows) {
         windows::init_key_hook();
     } else if cfg!(unix) {
-        panic!("not implemented");
+        panic!("unix keyboard hook not implemented");
     }
 }
 

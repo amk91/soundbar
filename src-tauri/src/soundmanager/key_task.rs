@@ -259,6 +259,8 @@ impl TryFrom<u32> for SysKeyCode {
     }
 }
 
+pub type KeyTaskCode = u32;
+
 #[derive(Default, Debug)]
 pub struct KeyTask {
     pub key: Option<KeyCode>,
@@ -289,21 +291,21 @@ impl KeyTask {
         })
     }
 
-    pub fn try_from(key_code: u32) -> Result<KeyTask> {
+    pub fn try_from(key_code: KeyTaskCode) -> Result<KeyTask> {
         let sys_key = key_code >> 2;
         let key = key_code & 0x0F;
 
         KeyTask::try_new(key, sys_key)
     }
 
-    pub fn get_code(&self) -> u16 {
+    pub fn get_code(&self) -> KeyTaskCode {
         if let Some(key) = &self.key {
             let mut code = if let Some(sys_key) = &self.sys_key {
-                (sys_key.clone() as u16) << 2
+                (sys_key.clone() as u32) << 2
             } else {
                 0
             };
-            code |= key.clone() as u16;
+            code |= key.clone() as u32;
             code
         } else {
             0

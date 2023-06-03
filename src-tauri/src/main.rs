@@ -2,25 +2,35 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::{
+    sync::{Arc, Mutex},
     path::PathBuf,
     fs,
     io::ErrorKind,
-    sync::Mutex,
+    thread,
 };
 
+use directories::ProjectDirs;
 use simple_logging;
 use log::LevelFilter;
 use tauri::{self, Manager};
 use crossbeam::channel::unbounded;
-use directories::ProjectDirs;
 
-mod app;
-use app::commands::{self, utils::{Command, CommandState}};
+mod soundmanager;
+use soundmanager::{
+    SoundManager,
+    soundstate::SoundState,
+    Soundbites,
+    SoundbitesKeyTasks,
+};
+
+mod commands;
+use commands::*;
 
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
-            if cfg!(debug_assertions) {
+            #[cfg(debug_assertions)]
+            {
                 let window = app.get_window("main").unwrap();
                 window.open_devtools();
             }
@@ -28,29 +38,39 @@ fn main() {
             let (root_folder, logs_folder) = generate_app_folders();
             init_logging(&logs_folder);
 
-            let (tx, rx) = unbounded::<Command>();
+            let soundbites = Arc::new(Mutex::new(Soundbites::new()));
+            let soundbites_keytasks = Arc::new(Mutex::new(SoundbitesKeyTasks::new()));
 
-            app.manage(CommandState::new(Mutex::new(tx)));
+            let (new_soundbite_tx, new_soundbite_rx) = unbounded();
+            let (new_soundbite_ack_tx, new_soundbite_ack_rx) = unbounded();
 
-            let handle = app.handle();
-            std::thread::spawn(|| {
-                let mut app = app::App::new(root_folder, rx, handle);
-                app.run();
+            app.manage(SoundState::new(
+                soundbites.clone(),
+                soundbites_keytasks.clone(),
+                new_soundbite_tx,
+                new_soundbite_ack_rx,
+            ));
+
+            thread::spawn(move || {
+                SoundManager::new(
+                    root_folder,
+                    new_soundbite_rx,
+                    new_soundbite_ack_tx,
+                    soundbites.clone(),
+                    soundbites_keytasks.clone()
+                ).run();
             });
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            commands::get_key,
-            commands::add_soundbite,
-            commands::set_soundbite_volume,
-            commands::set_soundbite_speed,
-            commands::link_soundbite_to_keytask,
-            commands::get_soundbites_list,
-            commands::get_linked_soundbites_list
+            add_soundbite,
+            remove_soundbite,
+            set_volume,
+            set_speed,
         ])
         .run(tauri::generate_context!())
-        .expect("unable to run tauri application");
+        .expect("error while running tauri application");
 }
 
 fn generate_app_folders() -> (PathBuf, PathBuf) {
@@ -92,11 +112,19 @@ fn init_logging(logs_folder: &PathBuf) {
         simple_logging::log_to_file(
             "logs\\trace.txt",
             LevelFilter::Trace,
-        ).expect("Unable to init logging on info.txt in debug");
+        ).expect("Unable to init logging for trace on info.txt in debug");
+        simple_logging::log_to_file(
+            "logs\\trace.txt",
+            LevelFilter::Error,
+        ).expect("Unable to init logging for error on info.txt in debug");
     } else {
         simple_logging::log_to_file(
             logs_folder.join("trace.txt"),
             LevelFilter::Trace
-        ).expect("Unable to init logging on info.txt");
+        ).expect("Unable to init logging for trace on info.txt");
+        simple_logging::log_to_file(
+            logs_folder.join("trace.txt"),
+            LevelFilter::Error
+        ).expect("Unable to init logging for error on info.txt");
     }
 }
