@@ -28,7 +28,11 @@ pub fn add_soundbite(
         name: name.clone(),
         keycode: if keycode == 0 { None } else { Some(keycode) }
     }) {
-        error!("Unable to send command to add soundbite named {} [[{:?}]]", name.clone(), err);
+        error!(
+            "Unable to send command to add soundbite named {} [[{:?}]]",
+            name.clone(),
+            err
+        );
         return Err(SoundManagerError::NewSoundbiteError(
             NewSoundbiteError::UnableToSendSoundbite(name.clone())
         ));

@@ -3,7 +3,7 @@
 
 use std::{
     sync::{Arc, Mutex},
-    path::PathBuf,
+    path::{PathBuf, Path},
     fs,
     io::ErrorKind,
     thread,
@@ -11,7 +11,7 @@ use std::{
 
 use directories::ProjectDirs;
 use simple_logging;
-use log::LevelFilter;
+use log::{trace, LevelFilter};
 use tauri::{self, Manager};
 use crossbeam::channel::unbounded;
 
@@ -38,6 +38,10 @@ fn main() {
             let (root_folder, logs_folder) = generate_app_folders();
             init_logging(&logs_folder);
 
+            trace!("App init");
+            trace!("Root folder: {}", root_folder.display());
+            trace!("Logs folder: {}", logs_folder.display());
+
             let soundbites = Arc::new(Mutex::new(Soundbites::new()));
             let soundbites_keytasks = Arc::new(Mutex::new(SoundbitesKeyTasks::new()));
 
@@ -56,8 +60,8 @@ fn main() {
                     root_folder,
                     new_soundbite_rx,
                     new_soundbite_ack_tx,
-                    soundbites.clone(),
-                    soundbites_keytasks.clone()
+                    soundbites,
+                    soundbites_keytasks
                 ).run();
             });
 
@@ -109,6 +113,14 @@ fn generate_app_folders() -> (PathBuf, PathBuf) {
 
 fn init_logging(logs_folder: &PathBuf) {
     if cfg!(debug_assertions) {
+        if let Err(err) = fs::metadata(Path::new("logs\\")) {
+            if err.kind() == ErrorKind::NotFound {
+                if let Err(_) = fs::create_dir_all(Path::new("logs\\")) {
+                    panic!("Unable to create directory logs\\ in debug");
+                }
+            }
+        }
+
         simple_logging::log_to_file(
             "logs\\trace.txt",
             LevelFilter::Trace,

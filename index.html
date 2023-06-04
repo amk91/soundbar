@@ -1,56 +1,57 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="stylesheet" href="/src/styles.css" />
+    <link rel="stylesheet" href="/src/scss/styles.scss" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri App</title>
-    <script type="module" src="/src/main.ts" defer></script>
+    <title>Soundbar</title>
+    <script type="module" src="/src/ts/main.ts" defer></script>
     <style>
-      .logo.vite:hover {
-        filter: drop-shadow(0 0 2em #747bff);
-      }
-
-      .logo.typescript:hover {
-        filter: drop-shadow(0 0 2em #2d79c7);
-      }
+      html, body { height: 100%; }
     </style>
   </head>
 
   <body>
-    <div class="container">
-      <h1>Welcome to Tauri!</h1>
-
-      <div class="row">
-        <a href="https://vitejs.dev" target="_blank">
-          <img src="/src/assets/vite.svg" class="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img
-            src="/src/assets/tauri.svg"
-            class="logo tauri"
-            alt="Tauri logo"
-          />
-        </a>
-        <a href="https://www.typescriptlang.org/docs" target="_blank">
-          <img
-            src="/src/assets/typescript.svg"
-            class="logo typescript"
-            alt="typescript logo"
-          />
-        </a>
-      </div>
-
-      <p>Click on the Tauri logo to learn more about the framework</p>
-
-      <div class="row">
-        <div>
-          <input id="greet-input" placeholder="Enter a name..." />
-          <button id="greet-button" type="button">Greet</button>
+    <div class="container-fluid h-100 d-flex flex-column">
+      <div class="row" style="padding-top: 1rem;"></div>
+      <div id="soundbites-list-container" class="row flex-grow-1">
+        <div class="col-4 border-end">
+          <h3 class="text-center mb-3">Items</h3>
+          <div id="soundbites-list" class="list-group list-group-flush overflow-auto h-100">
+            <a class="list-group-item list-group-item-action">item 1</a>
+            <a class="list-group-item list-group-item-action">item 2</a>
+          </div>
+        </div>
+        <div class="col-8">
+          <h3 id="soundbite-name" class="text-center" style="padding-bottom: 1rem;">Item</h3>
+          <div class="breadcrumb"></div>
+          <label for="keyShortcut" class="form-label" style="width: 20%;">Key Comb</label>
+          <button id="recordKey" type="button" class="btn btn-outline-primary">Record</button>
+          <div class="breadcrumb"></div>
+          <label for="volumeRange" class="form-label align-top" style="width: 20%;">Volume</label>
+          <input type="range" class="form-range w-50" min="0" max="200" step="1" list="snap" id="volumeRange">
+          <label id="volumeRangeValue" class="form-label align-top ms-5">100%</label>
+          <div class="breadcrumb"></div>
+          <label for="speedRange" class="form-label align-top" style="width: 20%;">Speed</label>
+          <input type="range" class="form-range w-50" min="0" max="200" step="1" list="snap" id="speedRange">
+          <label id="speedRangeValue" class="form-label align-top ms-5">100%</label>
+          <datalist id="snap"><option value=100></option></datalist>
         </div>
       </div>
-
-      <p id="greet-msg"></p>
+      <div class="row h-10">
+        <div class="col-4 text-center border-end">
+          <button id="add-soundbite" type="button" class="btn btn-outline-primary mx-2">
+            <img src="src/assets/icons8-upload-48.png" width="25" height="25">
+          </button>
+          <button id="remove-soundbite" type="button" class="btn btn-outline-primary mx-2">
+            <img src="src/assets/icons8-trash-48.png" width="25" height="25">
+          </button>
+          <button id="settings" type="button" class="btn btn-outline-primary mx-2">
+            <img src="src/assets/icons8-setting-48.png" width="25" height="25">
+          </button>
+        </div>
+      </div>
+      <div class="row" style="padding-bottom: 1rem;"></div>
     </div>
   </body>
 </html>
