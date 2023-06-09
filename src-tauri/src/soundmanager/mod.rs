@@ -131,16 +131,6 @@ impl SoundManager {
             ));
         }
 
-        let mut soundbites_keytasks = self.soundbites_keytasks.lock().unwrap();
-        if let Some(keycode) = soundbite_data.keycode {
-            if let Some(_) = soundbites_keytasks.get(&keycode) {
-                error!("Keycode {} already used", keycode);
-                return Err(SoundManagerError::NewSoundbiteError(
-                    NewSoundbiteError::KeyTaskUsed(keycode)
-                ));
-            }
-        }
-
         let soundbite = match Soundbite::new(
             &self.stream_handle,
             soundbite_data.name.clone(),
@@ -160,10 +150,6 @@ impl SoundManager {
         };
 
         soundbites.push(soundbite);
-        if let Some(keycode) = soundbite_data.keycode {
-            soundbites_keytasks.insert(keycode, soundbites.len() - 1);
-        }
-
         Ok(soundbite_data.name)
     }
 }

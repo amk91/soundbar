@@ -70,8 +70,13 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             add_soundbite,
             remove_soundbite,
+            set_name,
             set_volume,
             set_speed,
+            set_keytask_code,
+            remove_keytask_code,
+            get_soundbite,
+            get_soundbites,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

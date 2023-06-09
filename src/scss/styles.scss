@@ -1,2 +1,26 @@
-@import "bootstrap/scss/bootstrap";
+@import "/node_modules/bootstrap/scss/functions";
+@import "/node_modules/bootstrap/scss/variables";
 
+$body-bg-dark: #202020;
+
+$primary: $teal;
+
+$theme-colors: map-merge($theme-colors, (
+    "primary": $primary
+));
+
+@import "bootstrap";
+
+button > img {
+    width: 25px;
+    height: 25px;
+    filter: grayscale(1) invert(1);
+}
+
+.form-range::-webkit-slider-thumb {
+    background: $primary;
+}
+
+#soundbites-list {
+    border-radius: 5px;
+}

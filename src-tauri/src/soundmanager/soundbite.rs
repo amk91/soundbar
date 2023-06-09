@@ -20,8 +20,8 @@ pub struct SoundbiteData {
     buffer: Vec<i16>,
     channels: u16,
     sample_rate: u32,
-    volume: f32,
-    speed: f32,
+    pub volume: f32,
+    pub speed: f32,
 }
 
 impl SoundbiteData {
@@ -47,7 +47,7 @@ pub struct Soundbite {
     sink: Sink,
 
     pub name: String,
-    data: SoundbiteData,
+    pub data: SoundbiteData,
 }
 
 impl Soundbite {

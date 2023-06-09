@@ -16,38 +16,48 @@
       <div class="row" style="padding-top: 1rem;"></div>
       <div id="soundbites-list-container" class="row flex-grow-1">
         <div class="col-4 border-end">
-          <h3 class="text-center mb-3">Items</h3>
+          <h3 class="text-center mb-3">Soundbites</h3>
           <div id="soundbites-list" class="list-group list-group-flush overflow-auto h-100">
-            <a class="list-group-item list-group-item-action">item 1</a>
-            <a class="list-group-item list-group-item-action">item 2</a>
           </div>
         </div>
-        <div class="col-8">
-          <h3 id="soundbite-name" class="text-center" style="padding-bottom: 1rem;">Item</h3>
+        <div id="soundbite-info" class="col-8" hidden>
+          <input id="soundbite-name-input" type="text" class="form-control text-center fs-2" style="padding-bottom: 1rem;" hidden>
+          <p id="soundbite-name" class="text-center fs-2" style="padding-bottom: 1rem;"></p>
           <div class="breadcrumb"></div>
           <label for="keyShortcut" class="form-label" style="width: 20%;">Key Comb</label>
-          <button id="recordKey" type="button" class="btn btn-outline-primary">Record</button>
+          <button id="record-key" type="button" class="btn btn-outline-primary" title="Record keys shortcut. Esc to stop, enter to confirm">
+            <img src="src/assets/icons8-video-48.png">
+          </button>
+          <button id="remove-key" type="button" class="btn btn-outline-primary mx-2">
+            <img src="src/assets/icons8-trash-48.png">
+          </button>
+          <label id="keycode-value" class="form-label w-25"></label>
           <div class="breadcrumb"></div>
-          <label for="volumeRange" class="form-label align-top" style="width: 20%;">Volume</label>
-          <input type="range" class="form-range w-50" min="0" max="200" step="1" list="snap" id="volumeRange">
-          <label id="volumeRangeValue" class="form-label align-top ms-5">100%</label>
+          <label for="volume-range" class="form-label align-top" style="width: 20%;">Volume</label>
+          <input id="volume-range" type="range" class="form-range w-50" min="0" max="200" step="1" list="snap">
+          <label id="volume-range-value" class="form-label align-top ms-5">100%</label>
           <div class="breadcrumb"></div>
-          <label for="speedRange" class="form-label align-top" style="width: 20%;">Speed</label>
-          <input type="range" class="form-range w-50" min="0" max="200" step="1" list="snap" id="speedRange">
-          <label id="speedRangeValue" class="form-label align-top ms-5">100%</label>
-          <datalist id="snap"><option value=100></option></datalist>
+          <label for="speed-range" class="form-label align-top" style="width: 20%;">Speed</label>
+          <input id="speed-range" type="range" class="form-range w-50" min="0" max="200" step="1" list="snap">
+          <label id="speed-range-value" class="form-label align-top ms-5">100%</label>
+          <datalist id="snap">
+            <option value=50></option>
+            <option value=100></option>
+            <option value=150></option>
+          </datalist>
         </div>
       </div>
       <div class="row h-10">
         <div class="col-4 text-center border-end">
-          <button id="add-soundbite" type="button" class="btn btn-outline-primary mx-2">
-            <img src="src/assets/icons8-upload-48.png" width="25" height="25">
+          <button id="add-soundbite" type="button" class="btn btn-outline-primary mx-2" title="Add new soundbite">
+            <img src="src/assets/icons8-upload-48.png">
           </button>
-          <button id="remove-soundbite" type="button" class="btn btn-outline-primary mx-2">
-            <img src="src/assets/icons8-trash-48.png" width="25" height="25">
+          <input id="add-soundbite-input" type="file" accept=".mp3" hidden>
+          <button id="remove-soundbite" type="button" class="btn btn-outline-primary mx-2" title="Remove selected soundbite">
+            <img src="src/assets/icons8-trash-48.png">
           </button>
-          <button id="settings" type="button" class="btn btn-outline-primary mx-2">
-            <img src="src/assets/icons8-setting-48.png" width="25" height="25">
+          <button id="settings" type="button" class="btn btn-outline-primary mx-2" title="Settings">
+            <img src="src/assets/icons8-setting-48.png">
           </button>
         </div>
       </div>
