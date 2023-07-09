@@ -33,7 +33,7 @@ pub struct SoundManager {
     new_soundbite_ack: Sender<Result<String, SoundManagerError>>,
 
     stream_handle: OutputStreamHandle,
-    _stream: OutputStream,
+    _stream: OutputStream,  //OutputStream needs to be kept alive in order for the sound to be played
 
     soundbites: Arc<Mutex<Soundbites>>,
     soundbites_keytasks: Arc<Mutex<SoundbitesKeyTasks>>,

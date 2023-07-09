@@ -23,6 +23,7 @@ let soundbiteKeycode: HTMLElement | null;
 let isKeyRecording = false;
 let sysKeyRecorded: string | null;
 let keyRecorded: number | null;
+let keyNameRecorded: string | null;
 
 function setMaxHeight() {
     let soundbitesList = document.getElementById("soundbites-list");
@@ -124,24 +125,35 @@ function stopRecording(save: boolean) {
 
         keycode |= keyRecorded
 
-        
+        invoke('set_keytask_code', {
+            name: selectedSoundbite!.textContent,
+            keytaskCode: keycode
+        }).then((_) => {
+            let keyCombinatinString = '';
+            if (sysKeyRecorded && sysKeyRecorded.length > 0) {
+                keyCombinatinString = sysKeyRecorded + ' + ';
+            }
+
+            keyCombinatinString += keyNameRecorded;
+            soundbiteKeycode!.textContent = keyCombinatinString;
+        }).catch((err) => {
+            console.log(err);
+        });
 
         keyRecorded = null;
     }
 }
 
 function recordKey(event: KeyboardEvent) {
-    console.log(event);
     if (event.code === 'Escape') {
         stopRecording(false);
     } else if (event.code === 'Enter') {
         stopRecording(true);
-    } else if (!event.altKey || !event.ctrlKey || !event.shiftKey) {
+    } else if (event.key === 'Alt' || event.key === 'Control' || event.key === 'Shift') {
+        sysKeyRecorded = event.key;
+    } else {
         keyRecorded = event.keyCode;
-    } else if (event.altKey) {
-        if (event.code === 'AltLeft') {
-            sysKeyRecorded = 'AltLeft';
-        }
+        keyNameRecorded = event.key;
     }
 }
 

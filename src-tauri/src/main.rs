@@ -45,6 +45,8 @@ fn main() {
             let soundbites = Arc::new(Mutex::new(Soundbites::new()));
             let soundbites_keytasks = Arc::new(Mutex::new(SoundbitesKeyTasks::new()));
 
+            //TODO: load sundbites from file
+
             let (new_soundbite_tx, new_soundbite_rx) = unbounded();
             let (new_soundbite_ack_tx, new_soundbite_ack_rx) = unbounded();
 

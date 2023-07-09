@@ -34,8 +34,6 @@ pub enum SoundManagerError {
     SoundbiteNotFound(String),
     #[error("Key code {0} already used")]
     KeyTaskUsed(KeyTaskCode),
-    #[error("Key code {0} already assigned to soundbite {1}")]
-    KeyTaskAlreadyAssignedToSoundbite(KeyTaskCode, String),
     #[error("Soundbite named {0} already exists")]
     SoundbiteAlreadyExists(String),
     #[error("Invalid volume value")]

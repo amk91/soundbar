@@ -148,14 +148,11 @@ pub fn set_keytask_code(
     let soundbites = state.soundbites.lock().unwrap();
     if let Some(index) = soundbites.iter().position(|soundbite| soundbite.name == name) {
         let mut soundbites_keytasks = state.soundbites_keytasks.lock().unwrap();
-        if let Some(_) = soundbites_keytasks.iter().find(|keytask| *keytask.1 == index) {
-            return Err(SoundManagerError::KeyTaskAlreadyAssignedToSoundbite(keytask_code, name));
-        }
-
         if let Some(_) = soundbites_keytasks.get(&keytask_code) {
             return Err(SoundManagerError::KeyTaskUsed(keytask_code));
         }
 
+        soundbites_keytasks.retain(|_, v| *v != index);
         soundbites_keytasks.insert(keytask_code, index);
         Ok(())
     } else {
