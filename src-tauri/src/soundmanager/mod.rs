@@ -10,6 +10,8 @@ use anyhow::{Result, bail};
 use crossbeam::channel::{Receiver, Sender};
 use rodio::{OutputStreamHandle, OutputStream};
 use log::{trace, error};
+use once_cell::sync::Lazy;
+
 
 pub mod key_hook;
 pub mod key_task;
@@ -18,22 +20,27 @@ pub mod soundstate;
 pub mod utils;
 
 use soundbite::{Soundbite, SoundbiteData};
-use utils::{NewSoundbiteError, NewSoundbiteMessage, SoundManagerError};
+use utils::{NewSoundbiteError, SoundManagerError};
 
 use key_hook::{KEY_TASK, init_key_hook};
 use key_task::KeyTaskCode;
 
+use self::soundstate::Message;
+
 pub type Soundbites = Vec<Soundbite>;
 pub type SoundbitesKeyTasks = HashMap<KeyTaskCode, usize>;
 
-pub struct SoundManager {
-    root_folder: PathBuf,
+pub const SOUNDBITES_FILE: &str = "sdata.dat";
+pub const KEYTASKS_FILE: &str = "kdata.dat";
+pub static ROOT_FOLDER: Lazy<Mutex<PathBuf>> = Lazy::new(|| Mutex::new(PathBuf::from("")));
 
-    new_soundbite: Receiver<NewSoundbiteMessage>,
-    new_soundbite_ack: Sender<Result<String, SoundManagerError>>,
+pub struct SoundManager {
+    messages: Receiver<Message>,
+    responses: Sender<Result<String, SoundManagerError>>,
 
     stream_handle: OutputStreamHandle,
-    _stream: OutputStream,  //OutputStream needs to be kept alive in order for the sound to be played
+    //OutputStream needs to be kept alive in order for the sound to be played
+    _stream: OutputStream,
 
     soundbites: Arc<Mutex<Soundbites>>,
     soundbites_keytasks: Arc<Mutex<SoundbitesKeyTasks>>,
@@ -41,10 +48,8 @@ pub struct SoundManager {
 
 impl SoundManager {
     pub fn new(
-        root_folder: PathBuf,
-
-        new_soundbite: Receiver<NewSoundbiteMessage>,
-        new_soundbite_ack: Sender<Result<String, SoundManagerError>>,
+        messages: Receiver<Message>,
+        responses: Sender<Result<String, SoundManagerError>>,
 
         soundbites: Arc<Mutex<Soundbites>>,
         soundbites_keytasks: Arc<Mutex<SoundbitesKeyTasks>>,
@@ -56,11 +61,17 @@ impl SoundManager {
             Err(err) => panic!("Unable to get default output stream [[{:?}]]", err),
         };
 
-        SoundManager {
-            root_folder,
+        for soundbite in soundbites.lock().unwrap().iter_mut() {
+            soundbite.init_sink(&stream_handle).map_err(|err| error!(
+                "Unable to init sink for soundbite named {} [[{:?}]]",
+                soundbite.data.name.clone(),
+                err,
+            )).unwrap();
+        }
 
-            new_soundbite,
-            new_soundbite_ack,
+        SoundManager {
+            messages,
+            responses,
 
             stream_handle,
             _stream,
@@ -80,14 +91,16 @@ impl SoundManager {
                 }
             }
 
-            // If a request to add a new soundbite is sent,
-            // the backend sends back the result of the call add_soundbite
-            if let Ok(soundbite_data) = self.new_soundbite.try_recv() {
-                self.new_soundbite_ack.send(
-                    self.add_soundbite(soundbite_data)
-                ).map_err(
-                    |err| error!("Unable to send ack for new soundbite [[{:?}]]", err)
-                ).unwrap();
+            if let Ok(message) = self.messages.try_recv() {
+                match message {
+                    Message::NewSoundbite(data) => {
+                        self.responses.send(
+                            self.add_soundbite(data)
+                        ).map_err(
+                            |err| error!("Unable to send ack for new soundbite [[{:?}]]", err)
+                        ).unwrap();
+                    },
+                }
             }
 
             thread::sleep(Duration::from_millis(100));
@@ -96,8 +109,8 @@ impl SoundManager {
 
     fn play_soundbite(&self, key_task_code: KeyTaskCode) -> Result<()> {
         if let (Ok(soundbites), Ok(soundbites_keytasks)) = (
-            self.soundbites.clone().try_lock(),
-            self.soundbites_keytasks.clone().try_lock()
+            self.soundbites.try_lock(),
+            self.soundbites_keytasks.try_lock()
         ) {
             match soundbites_keytasks.get(&key_task_code) {
                 Some(index) => {
@@ -121,26 +134,25 @@ impl SoundManager {
 
     fn add_soundbite(
         &self,
-        soundbite_data: NewSoundbiteMessage
+        soundbite_data: SoundbiteData
     ) -> Result<String, SoundManagerError> {
         let mut soundbites = self.soundbites.lock().unwrap();
-        if let Some(_) = soundbites.iter().position(|s| s.name == soundbite_data.name) {
+        if let Some(_) = soundbites.iter().position(|s| s.data.name == soundbite_data.name) {
             error!("Soundbite named {} already exists", soundbite_data.name);
             return Err(SoundManagerError::NewSoundbiteError(
                 NewSoundbiteError::NameUsed(soundbite_data.name)
             ));
         }
 
+        let soundbite_name = soundbite_data.name.clone();
         let soundbite = match Soundbite::new(
             &self.stream_handle,
-            soundbite_data.name.clone(),
-            soundbite_data.data
+            soundbite_data
         ) {
             Ok(soundbite) => soundbite,
             Err(err) => {
                 error!(
-                    "Unable to generate soundbite named {} [[{:?}]]",
-                    soundbite_data.name,
+                    "Unable to generate soundbite named {soundbite_name} [[{:?}]]",
                     err
                 );
                 return Err(SoundManagerError::NewSoundbiteError(
@@ -150,6 +162,6 @@ impl SoundManager {
         };
 
         soundbites.push(soundbite);
-        Ok(soundbite_data.name)
+        Ok(soundbite_name)
     }
 }

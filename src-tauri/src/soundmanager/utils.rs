@@ -3,11 +3,6 @@ use super::{KeyTaskCode, SoundbiteData};
 use thiserror::Error;
 use serde::Serialize;
 
-pub struct NewSoundbiteMessage {
-    pub data: SoundbiteData,
-    pub name: String,
-}
-
 #[derive(Serialize)]
 pub struct SoundbiteInfo {
     pub name: String,
@@ -24,6 +19,8 @@ pub enum NewSoundbiteError {
     NameUsed(String),
     #[error("Unable to send soundbite {0} to backend")]
     UnableToSendSoundbite(String),
+    #[error("Unable to create soundbite {0} from data")]
+    UnableToCreateFromData(String),
 }
 
 #[derive(Error, Debug, Clone, Serialize)]
@@ -40,4 +37,6 @@ pub enum SoundManagerError {
     InvalidVolumeValue,
     #[error("Invalid speed value")]
     InvalidSpeedValue,
+    #[error("Unable to close app")]
+    CloseAppError,
 }

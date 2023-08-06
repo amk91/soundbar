@@ -2,54 +2,36 @@ use tauri::State;
 use anyhow::Result;
 use log::error;
 
-use crate::soundmanager::{SoundManager, key_task};
-
 use super::soundmanager::{
-    soundstate::SoundState,
+    soundstate::{SoundState, Message},
     soundbite::SoundbiteData,
     key_task::KeyTaskCode,
     utils::{
         SoundManagerError,
         NewSoundbiteError,
-        NewSoundbiteMessage,
         SoundbiteInfo,
     }
 };
 
 #[tauri::command]
 pub fn add_soundbite(
-    buffer: Vec<u8>,
     name: String,
+    buffer: Vec<u8>,
     state: State<'_, SoundState>
 ) -> Result<String, SoundManagerError> {
-    let data = SoundbiteData::new(buffer, 100f32, 100f32).unwrap();
-    if let Err(err) = state.new_soundbite.send(NewSoundbiteMessage {
-        data,
-        name: name.clone(),
-    }) {
+    let soundbite_name = name.clone();
+    let data = SoundbiteData::new(name, buffer, 100f32, 100f32).unwrap();
+    if let Err(err) = state.messages.send(Message::NewSoundbite(data)) {
         error!(
-            "Unable to send command to add soundbite named {} [[{:?}]]",
-            name.clone(),
+            "Unable to send command to add soundbite named {soundbite_name} [[{:?}]]",
             err
         );
         return Err(SoundManagerError::NewSoundbiteError(
-            NewSoundbiteError::UnableToSendSoundbite(name.clone())
+            NewSoundbiteError::UnableToSendSoundbite(soundbite_name)
         ));
     }
 
-    match state.new_soundbite_ack.recv() {
-        Ok(message) => return message,
-        Err(err) => {
-            error!(
-                "Unable to receive command to add soundbite named {} [[{:?}]]",
-                name.clone(),
-                err
-            );
-            return Err(SoundManagerError::NewSoundbiteError(
-                NewSoundbiteError::UnableToSendSoundbite(name.clone())
-            ));
-        }
-    }
+    Ok(soundbite_name)
 }
 
 #[tauri::command]
@@ -58,7 +40,7 @@ pub fn remove_soundbite(
     state: State<'_, SoundState>,
 ) -> Result<(), SoundManagerError> {
     let mut soundbites = state.soundbites.lock().unwrap();
-    match soundbites.iter().position(|s| s.name == name) {
+    match soundbites.iter().position(|s| s.data.name == name) {
         Some(index) => {
             let mut soundbites_keytasks = state.soundbites_keytasks.lock().unwrap();
             let keys: Vec<KeyTaskCode> = soundbites_keytasks.iter().filter_map(
@@ -85,12 +67,12 @@ pub fn set_name(
     state: State<'_, SoundState>,
 ) -> Result<(), SoundManagerError> {
     let mut soundbites = state.soundbites.lock().unwrap();
-    match soundbites.iter().find(|soundbite| soundbite.name == new_name) {
+    match soundbites.iter().find(|soundbite| soundbite.data.name == new_name) {
         Some(_) => Err(SoundManagerError::SoundbiteAlreadyExists(new_name)),
         None => {
-            match soundbites.iter().position(|soundbite| soundbite.name == name) {
+            match soundbites.iter().position(|soundbite| soundbite.data.name == name) {
                 Some(index) => {
-                    soundbites[index].name = new_name;
+                    soundbites[index].data.name = new_name;
                     Ok(())
                 },
                 None => Err(SoundManagerError::SoundbiteNotFound(name)),
@@ -110,7 +92,7 @@ pub fn set_volume(
     }
 
     let mut soundbites = state.soundbites.lock().unwrap();
-    match soundbites.iter().position(|s| s.name == name) {
+    match soundbites.iter().position(|s| s.data.name == name) {
         Some(index) => {
             soundbites[index].set_volume(volume);
             Ok(())
@@ -130,7 +112,7 @@ pub fn set_speed(
     }
 
     let mut soundbites = state.soundbites.lock().unwrap();
-    match soundbites.iter().position(|s| s.name == name) {
+    match soundbites.iter().position(|s| s.data.name == name) {
         Some(index) => {
             soundbites[index].set_speed(speed);
             Ok(())
@@ -146,7 +128,7 @@ pub fn set_keytask_code(
     state: State<'_, SoundState>
 ) -> Result<(), SoundManagerError> {
     let soundbites = state.soundbites.lock().unwrap();
-    if let Some(index) = soundbites.iter().position(|soundbite| soundbite.name == name) {
+    if let Some(index) = soundbites.iter().position(|soundbite| soundbite.data.name == name) {
         let mut soundbites_keytasks = state.soundbites_keytasks.lock().unwrap();
         if let Some(_) = soundbites_keytasks.get(&keytask_code) {
             return Err(SoundManagerError::KeyTaskUsed(keytask_code));
@@ -166,7 +148,7 @@ pub fn remove_keytask_code(
     state: State<'_, SoundState>
 ) -> Result<(), SoundManagerError> {
     let soundbites = state.soundbites.lock().unwrap();
-    if let Some(index) = soundbites.iter().position(|soundbite| soundbite.name == name) {
+    if let Some(index) = soundbites.iter().position(|soundbite| soundbite.data.name == name) {
         let mut soundbites_keytasks = state.soundbites_keytasks.lock().unwrap();
         let keys: Vec<KeyTaskCode> = soundbites_keytasks.iter().filter_map(
             |(&key, &val)| if val == index { Some(key) } else { None }
@@ -187,7 +169,7 @@ pub fn get_soundbite(
     state: State<'_, SoundState>
 ) -> Result<SoundbiteInfo, SoundManagerError> {
     let soundbites = state.soundbites.lock().unwrap();
-    match soundbites.iter().position(|soundbite| *soundbite.name == name) {
+    match soundbites.iter().position(|soundbite| *soundbite.data.name == name) {
         Some(index) => {
             let soundbites_keytasks = state.soundbites_keytasks.lock().unwrap();
             let keycode = match soundbites_keytasks.iter().find(|(_, &value)| {
@@ -199,7 +181,7 @@ pub fn get_soundbite(
 
             let soundbite = &soundbites[index];
             Ok(SoundbiteInfo {
-                name: soundbite.name.clone(),
+                name: soundbite.data.name.clone(),
                 volume: soundbite.data.volume,
                 speed: soundbite.data.speed,
                 keycode
@@ -216,5 +198,5 @@ pub fn get_soundbites(
     state: State<'_, SoundState>
 ) -> Vec<String> {
     let soundbites = state.soundbites.lock().unwrap();
-    soundbites.iter().map(|soundbite| soundbite.name.clone()).collect()
+    soundbites.iter().map(|soundbite| soundbite.data.name.clone()).collect()
 }
