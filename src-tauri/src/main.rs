@@ -88,6 +88,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             add_soundbite,
             remove_soundbite,
+            play_soundbite,
+            stop_soundbite,
             set_name,
             set_volume,
             set_speed,

@@ -20,7 +20,7 @@ pub fn add_soundbite(
     state: State<'_, SoundState>
 ) -> Result<String, SoundManagerError> {
     let soundbite_name = name.clone();
-    let data = SoundbiteData::new(name, buffer, 100f32, 100f32).unwrap();
+    let data = SoundbiteData::new(name, buffer, 1f32, 1f32).unwrap();
     if let Err(err) = state.messages.send(Message::NewSoundbite(data)) {
         error!(
             "Unable to send command to add soundbite named {soundbite_name} [[{:?}]]",
@@ -58,6 +58,30 @@ pub fn remove_soundbite(
         }
         None => Err(SoundManagerError::SoundbiteNotFound(name)),
     }
+}
+
+#[tauri::command]
+pub fn play_soundbite(
+    name: String,
+    state: State<'_, SoundState>
+) {
+    let soundbites = state.soundbites.lock().unwrap();
+    soundbites
+        .iter()
+        .find(|soundbite| soundbite.data.name == name)
+        .map(|soundbite| soundbite.play());
+}
+
+#[tauri::command]
+pub fn stop_soundbite(
+    name: String,
+    state: State<'_, SoundState>
+) {
+    let soundbites = state.soundbites.lock().unwrap();
+    soundbites
+        .iter()
+        .find(|soundbite| soundbite.data.name == name)
+        .map(|soundbite| soundbite.stop());
 }
 
 #[tauri::command]

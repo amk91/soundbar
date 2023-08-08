@@ -40,7 +40,7 @@ impl SoundbiteData {
         volume: f32,
         speed: f32,
     ) -> Result<SoundbiteData> {
-        let source = Decoder::new(Cursor::new(buffer))?;
+        let source = Decoder::new_mp3(Cursor::new(buffer))?;
         let channels = source.channels();
         let sample_rate = source.sample_rate();
         Ok(SoundbiteData {
@@ -116,5 +116,9 @@ impl Soundbite {
                 self.data.buffer.clone()
             )
         );
+    }
+
+    pub fn stop(&self) {
+        self.sink.stop();
     }
 }

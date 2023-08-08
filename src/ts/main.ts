@@ -157,6 +157,14 @@ function recordKey(event: KeyboardEvent) {
     }
 }
 
+function playSound(_: MouseEvent) {
+    invoke('play_soundbite', { name: selectedSoundbite!.textContent })
+}
+
+function stopSound(_: MouseEvent) {
+    invoke('stop_soundbite', { name: selectedSoundbite!.textContent })
+}
+
 function assignKeyToSoundbite(_: MouseEvent) {
     if (!isKeyRecording) {
         startRecording();
@@ -194,7 +202,7 @@ function onAddSoundbite(event: Event) {
                 for (var i = 0; i < array.length; ++i) {
                     buffer.push(array[i])
                 }
-                
+
                 let filename = file.name.replace(/\.[^/.]+$/, "")
 
                 invoke("add_soundbite", { buffer: buffer, name: filename})
@@ -295,11 +303,10 @@ window.addEventListener("DOMContentLoaded", () => {
         speedRangeValue!.textContent = speedRange!.value + "%";
     };
 
-    let recordKeyButton = document.getElementById('record-key');
-    recordKeyButton!.onclick = assignKeyToSoundbite;
-
-    let removeKeyButton = document.getElementById('remove-key');
-    removeKeyButton!.onclick = removeKeyFromSoundbite;
+    document.getElementById('play-sound')!.onclick = playSound;
+    document.getElementById('stop-sound')!.onclick = stopSound;
+    document.getElementById('record-key')!.onclick = assignKeyToSoundbite;
+    document.getElementById('remove-key')!.onclick = removeKeyFromSoundbite;
 
     let addSoundbiteInput = document.getElementById('add-soundbite-input');
     addSoundbiteInput!.oninput = (event) => {
@@ -311,14 +318,9 @@ window.addEventListener("DOMContentLoaded", () => {
         addSoundbiteInput!.click();
     }
 
-    let removeSoundbiteButton = document.getElementById('remove-soundbite');
-    removeSoundbiteButton!.onclick = onRemoveSoundbite;
-
-    let settingsButton = document.getElementById('settings');
-    settingsButton!.onclick = onSettings;
-
-    let soundbitesList = document.getElementById("soundbites-list");
-    soundbitesList!.onclick = updateSoundbiteInfo;
+    document.getElementById('remove-soundbite')!.onclick = onRemoveSoundbite;
+    document.getElementById('settings')!.onclick = onSettings;
+    document.getElementById("soundbites-list")!.onclick = updateSoundbiteInfo;
 
     invoke("get_soundbites")
         .then((response) => {
